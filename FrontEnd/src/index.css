@@ -1,0 +1,496 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   '이공공이 2002' 포스터 팔레트
+
+   2002년으로 돌아가는 Y2K 레트로다. 포스터에 있는 것을 그대로 옮겼다 —
+   붉은 벽돌색 망점 배경, 노란 '2002' 숫자, 크림색 종이, 검은 픽셀 테두리,
+   피처폰 문자창의 파랑, 픽셀 하트의 빨강. 이 블록만 갈아끼우면 전 페이지가 따라온다.
+   --------------------------------------------------------------------------- */
+@theme {
+  /* 크림색 종이 — 바탕 · 카드 안쪽 · 흐린 테두리. 짙어질수록 갈색 종이 */
+  --color-sand-50: #fffaf0;
+  --color-sand-100: #f8eed6;
+  --color-sand-200: #efdfb8;
+  --color-sand-300: #e2c98f;
+  --color-sand-400: #cfab5e;
+  --color-sand-500: #b0873b;
+  --color-sand-600: #8d6a2b;
+  --color-sand-700: #6c5021;
+  --color-sand-800: #4d3917;
+
+  /* 피처폰 문자창 · 브라우저 창 제목줄의 파랑 — 주 버튼 · 링크 · 강조 */
+  --color-cobalt-50: #eef3ff;
+  --color-cobalt-100: #d9e4ff;
+  --color-cobalt-200: #b3c6ff;
+  --color-cobalt-300: #7f9cf5;
+  --color-cobalt-400: #4f74e8;
+  --color-cobalt-500: #2b4fd1;
+  --color-cobalt-600: #1f3aa8;
+  --color-cobalt-700: #172b7f;
+
+  /* 포스터 바탕의 주황·벽돌빛 — 주의 상태 · 보조 버튼('답장') */
+  --color-flame-100: #fdebdc;
+  --color-flame-200: #fad2b4;
+  --color-flame-300: #f4a97a;
+  --color-flame-400: #ec7a3f;
+  --color-flame-500: #d9541e;
+  --color-flame-600: #ad3b12;
+
+  /* 망점 배경의 짙은 빨강 — 오류 · 위험 */
+  --color-brick-50: #fdeeec;
+  --color-brick-300: #ec8a7c;
+  --color-brick-400: #d84a38;
+  --color-brick-500: #b52e1e;
+  --color-brick-600: #8d2114;
+
+  /* 픽셀 하트 — **솔로파티(2부)** 표시 전용. 본 행사(파랑)와 한눈에 갈려야 한다. */
+  --color-heart-100: #ffe6ea;
+  --color-heart-200: #ffc3cc;
+  --color-heart-400: #ff5d7a;
+  --color-heart-500: #e8304f;
+
+  /* '2002' 의 노랑 · 픽셀 별 */
+  --color-gold-300: #ffe38a;
+  --color-gold-400: #f5b719;
+  --color-gold-500: #d99a00;
+
+  /* 글자색 — 픽셀 테두리와 같은 잉크 검정 계열 */
+  --color-ink-900: #15110d;
+  --color-ink-800: #2a2219;
+  --color-ink-700: #3f3427;
+  --color-ink-600: #5a4d3e;
+  --color-ink-500: #7b6c5b;
+  --color-ink-400: #a3958a;
+  --color-ink-300: #c7bcb0;
+
+  /* 바탕. 포스터 카드의 크림 종이 */
+  --color-cream: #f6ecd4;
+
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  /* 픽셀 글꼴. 제목 · 이름표 · 숫자에만 쓰고 본문은 읽기 편한 Pretendard 로 둔다. */
+  --font-pixel: 'Galmuri14', 'Galmuri11', 'DungGeunMo', var(--font-sans);
+  --font-pixel-small: 'Galmuri11', 'Galmuri14', var(--font-sans);
+
+  --radius-blob: 2rem;
+}
+
+/* 픽셀 글꼴은 자체 호스팅한다 (public/fonts). CDN 이 막혀도 제목이 살아 있어야 한다.
+   Galmuri 는 SIL OFL 이라 재배포에 제약이 없다. */
+/* Galmuri14 는 굵기가 하나뿐이다(패키지에 -Bold 파일이 없다). 그 한 파일을 모든
+   굵기에 걸어 두어 font-bold 를 써도 시스템 글꼴로 떨어지지 않게 한다. */
+@font-face {
+  font-family: 'Galmuri14';
+  src: url('/fonts/Galmuri14.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream text-ink-800 font-sans antialiased;
+    /* 모바일 접속이 대부분이므로 가로 스크롤은 원천 차단한다. */
+    overflow-x: hidden;
+  }
+
+  /* 금액·시간 비교가 잦은 화면이라 숫자는 등폭으로 정렬을 맞춘다. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-cobalt-500;
+  }
+}
+
+@layer components {
+  /* 픽셀 글꼴. 비트맵 글꼴이라 안티앨리어싱을 끄면 포스터처럼 또렷하게 선다. */
+  .font-pixel {
+    font-family: var(--font-pixel);
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: unset;
+    letter-spacing: 0.01em;
+  }
+
+  .font-pixel-small {
+    font-family: var(--font-pixel-small);
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: unset;
+  }
+
+  /* 포스터 제목의 검은 픽셀 테두리. 여덟 방향 그림자를 겹쳐 획 바깥으로만 두른다 —
+     text-stroke 는 안쪽까지 파고들어 픽셀 글꼴의 가는 획을 먹어 버린다.
+     두께는 글자 크기에 비례해야 하므로 em 으로 준다. */
+  .wordmark-outline {
+    --o: 0.07em;
+    text-shadow:
+      var(--o) 0 0 var(--color-ink-900),
+      calc(-1 * var(--o)) 0 0 var(--color-ink-900),
+      0 var(--o) 0 var(--color-ink-900),
+      0 calc(-1 * var(--o)) 0 var(--color-ink-900),
+      var(--o) var(--o) 0 var(--color-ink-900),
+      calc(-1 * var(--o)) var(--o) 0 var(--color-ink-900),
+      var(--o) calc(-1 * var(--o)) 0 var(--color-ink-900),
+      calc(-1 * var(--o)) calc(-1 * var(--o)) 0 var(--color-ink-900),
+      calc(2 * var(--o)) calc(2 * var(--o)) 0 var(--color-ink-900);
+  }
+
+  /* 포스터의 '브라우저 창'. 검은 픽셀 테두리에 오른쪽 아래로 딱 떨어지는 그림자.
+     둥근 모서리를 크게 주면 2026년 앱처럼 보이므로 아주 조금만 깎는다. */
+  .card {
+    @apply rounded-lg border-2 border-ink-900 bg-white shadow-[4px_4px_0_var(--color-ink-900)];
+  }
+
+  /* 창 제목줄. 카드 맨 위에 붙여 '이공공이 초대장' 처럼 쓴다. */
+  .window-bar {
+    @apply flex items-center gap-2 border-b-2 border-ink-900 bg-cobalt-500 px-3 py-2
+           text-sm font-bold text-white;
+  }
+
+  /* 제목줄 왼쪽의 동그라미 셋 — 포스터에서 검정 · 흰 · 흰 이다. */
+  .window-dots {
+    @apply flex shrink-0 gap-1;
+  }
+
+  .window-dots > span {
+    @apply block size-3 rounded-full border-2 border-ink-900 bg-white;
+  }
+
+  .window-dots > span:first-child {
+    @apply bg-ink-900;
+  }
+
+  /* Tailwind v4 는 @apply 로 다른 컴포넌트 클래스를 참조할 수 없어
+     버튼 공통 속성을 각 변형에 그대로 나열한다.
+     버튼은 피처폰 문자창의 [메뉴] · [답장] 이다 — 각진 픽셀 테두리에 딱 떨어지는 그림자. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border-2 border-ink-900
+           px-5 py-2.5 text-sm font-bold transition
+           disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  /* [메뉴] — 파랑 */
+  .btn-primary {
+    @apply bg-cobalt-500 text-white shadow-[3px_3px_0_var(--color-ink-900)]
+           hover:bg-cobalt-400
+           active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_var(--color-ink-900)]
+           disabled:active:translate-x-0 disabled:active:translate-y-0;
+  }
+
+  /* [답장] — 주황. 채운 버튼과 나란히 세우는 짝이라 그림자까지 같게 둔다. */
+  .btn-secondary {
+    @apply bg-flame-400 text-white shadow-[3px_3px_0_var(--color-ink-900)]
+           hover:bg-flame-300
+           active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_var(--color-ink-900)];
+  }
+
+  /* 그림자 없는 납작한 보조 버튼 — 포스터 초대장의 [수락하기] [거절안함] */
+  .btn-ghost {
+    @apply bg-sand-100 text-ink-800 hover:bg-sand-200;
+  }
+
+  .input {
+    @apply w-full rounded-md border-2 border-ink-900 bg-white px-4 py-3
+           text-base text-ink-900 placeholder:text-ink-400
+           focus:border-cobalt-500 focus:outline-none focus:shadow-[3px_3px_0_var(--color-cobalt-500)];
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-bold text-ink-600;
+  }
+
+  /* 포스터 바탕의 망점. 헤더 띠 · 푸터 · 히어로에 쓴다. */
+  .halftone {
+    background-color: var(--color-brick-500);
+    background-image: radial-gradient(rgb(0 0 0 / 0.28) 1.4px, transparent 1.6px);
+    background-size: 7px 7px;
+  }
+
+  /* 크림 종이 위의 옅은 망점. 카드 사이 바탕에 깐다. */
+  .halftone-light {
+    background-color: var(--color-cream);
+    background-image: radial-gradient(rgb(173 59 18 / 0.13) 1.2px, transparent 1.4px);
+    background-size: 8px 8px;
+  }
+
+  /* 포스터 위쪽의 만국기 띠 — 색을 번갈아 채운 삼각형 */
+  .bunting {
+    height: 14px;
+    background-image:
+      linear-gradient(135deg, var(--color-brick-400) 50%, transparent 50%),
+      linear-gradient(225deg, var(--color-brick-400) 50%, transparent 50%),
+      linear-gradient(135deg, var(--color-cobalt-500) 50%, transparent 50%),
+      linear-gradient(225deg, var(--color-cobalt-500) 50%, transparent 50%),
+      linear-gradient(135deg, var(--color-gold-400) 50%, transparent 50%),
+      linear-gradient(225deg, var(--color-gold-400) 50%, transparent 50%),
+      linear-gradient(135deg, #3aa655 50%, transparent 50%),
+      linear-gradient(225deg, #3aa655 50%, transparent 50%);
+    background-position:
+      0 0, 14px 0,
+      28px 0, 42px 0,
+      56px 0, 70px 0,
+      84px 0, 98px 0;
+    background-size: 14px 14px;
+    background-repeat: repeat-x;
+  }
+
+  /* 피처폰 문자 말풍선 — 포스터의 '나랑 이공대 교류전 갈 사람?' */
+  .speech-bubble {
+    @apply relative inline-block rounded-md border-2 border-ink-900 bg-white px-4 py-2
+           text-sm font-bold text-ink-900 shadow-[3px_3px_0_var(--color-ink-900)];
+  }
+
+  .speech-bubble::after {
+    content: '';
+    @apply absolute left-1/2 top-full size-0 -translate-x-1/2;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid var(--color-ink-900);
+  }
+
+  /* 노란 형광펜 밑줄 — 초대장의 '2026년 10월 24일 토요일' */
+  .mark {
+    @apply bg-gold-400 px-1 text-ink-900;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  /* 픽셀 하트가 콩닥이는 결 */
+  .heartbeat {
+    animation: heartbeat 1.6s ease-in-out infinite;
+  }
+
+  /* 별이 반짝이는 결 */
+  .twinkle {
+    animation: twinkle 2.2s ease-in-out infinite;
+  }
+
+  /* 'ON AIR' 빨간 점 */
+  .blink {
+    animation: blink 1.4s steps(1) infinite;
+  }
+
+  /* 나침반 로고가 제자리에서 천천히 떠다니는 결 (지난 행사에서 이어받은 이름) */
+  .drift-slow {
+    animation: drift-slow 7s ease-in-out infinite;
+  }
+
+  /* -------------------------------------------------------------------------
+     럭키드로우 추첨 화면 (/draw)
+     프로젝터에 띄우는 화면이라 이 구역만 어둡게 간다.
+     ------------------------------------------------------------------------- */
+
+  /* 숫자 릴. 한 칸만 보이는 창에 0~9 가 여러 벌 이어진 띠를 흘린다.
+     띠의 높이가 곧 칸 수이므로 이동량을 % 로 계산할 수 있다 — 픽셀을 재지 않는다. */
+  .reel-window {
+    @apply relative overflow-hidden rounded-2xl;
+    height: var(--reel-cell);
+    width: calc(var(--reel-cell) * 0.72);
+  }
+
+  /* 띠의 움직임은 JS 가 직접 몬다 (DrawPage 의 Reel).
+     돌 때는 아래 keyframe 으로 등속 회전하고, 멈추라는 신호가 오면 **그 순간의
+     위치를 읽어** 거기서부터 목표 숫자까지 감속 transition 을 이어 붙인다.
+     keyframe 을 그냥 걷어내면 위치가 0 으로 튀기 때문이다. */
+  .reel-strip {
+    will-change: transform;
+  }
+
+  .reel-rolling {
+    animation: reel-roll 0.5s linear infinite;
+  }
+
+  .reel-cell {
+    height: var(--reel-cell);
+    line-height: var(--reel-cell);
+  }
+
+  /* 잠기는 순간의 '덜컥'. 릴이 멈췄다는 신호를 몸으로 느끼게 한다. */
+  .reel-clunk {
+    animation: reel-clunk 0.34s ease-out;
+  }
+
+  /* 번호 타일이 탈락할 때 — 색이 빠지고 한 번 움츠러든다. */
+  .tile-out {
+    animation: tile-out 0.42s ease-out both;
+  }
+
+  .winner-pop {
+    animation: winner-pop 0.72s cubic-bezier(0.16, 1.4, 0.3, 1) both;
+  }
+
+  .confetti-piece {
+    @apply pointer-events-none absolute top-0 h-3 w-1.5 rounded-sm;
+    animation: confetti-fall linear forwards;
+  }
+
+  /* -------------------------------------------------------------------------
+     개인 카드 (/p/<token>) — 살아 있는 화면임을 보이는 띠
+
+     캡처 화면과 실제 화면을 문 앞에서 1초 만에 가르기 위한 것이다. 글자가
+     흐르지 않으면 스크린샷이다. 같은 내용을 두 벌 이어 붙이고 절반만큼
+     밀어서, 끝나는 지점이 시작 지점과 정확히 겹치게 한다(이음매가 없다).
+     ------------------------------------------------------------------------- */
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    animation: ticker-slide 14s linear infinite;
+  }
+}
+
+/* 두 벌 중 한 벌만큼만 흐른다. 그 순간 원래 자리로 돌아가므로 이음매가 보이지 않는다. */
+@keyframes ticker-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.12);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.86);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes drift-slow {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(5deg);
+  }
+}
+
+/* 한 바퀴(10칸)를 등속으로. 무한 반복되므로 위치는 항상 0~10칸 사이에 있다. */
+@keyframes reel-roll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(var(--reel-cell) * -10));
+  }
+}
+
+@keyframes reel-clunk {
+  0% {
+    transform: translateY(-7%) scale(1.05);
+  }
+  55% {
+    transform: translateY(2%) scale(0.985);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tile-out {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.82);
+  }
+  100% {
+    transform: scale(0.9);
+  }
+}
+
+@keyframes winner-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+  }
+  100% {
+    opacity: 0.15;
+    transform: translate3d(var(--drift), 104vh, 0) rotate(var(--spin));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* 개인 카드의 띠만은 예외다. 이건 장식이 아니라 **살아 있는 화면임을 보이는
+     기능**이라, 멈추는 순간 캡처본과 구별할 수 없어져 문 앞에서 쓸모가 없어진다.
+     대신 눈이 덜 피로하도록 더 느리게 흐른다. */
+  .ticker-track {
+    animation-duration: 24s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

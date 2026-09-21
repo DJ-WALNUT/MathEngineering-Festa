@@ -1,0 +1,2 @@
+# Cloudflare Pages SPA 라우팅: 모든 경로를 index.html 로 넘긴다.
+/*    /index.html   200

@@ -1,0 +1,37 @@
+# 비밀 값 — 절대 커밋 금지
+#
+# 점 없는 'env' 나 'env.txt' 처럼 이름이 조금만 달라도 *.env 패턴을 빠져나간다.
+# (실제로 BackEnd/env 가 시크릿을 담은 채 스테이징된 적이 있다)
+# 그래서 env 로 시작하거나 끝나는 이름을 통째로 막는다.
+.env
+.env.*
+*.env
+env
+env.*
+!.env.example
+!*.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.db
+BackEnd/data/
+# demo_seed.py 가 만드는 가짜 거래내역. 언제든 다시 만들 수 있다.
+BackEnd/samples/
+# 구글폼 응답 시트 내려받기 — 실명·전화번호가 든 개인정보다. 매핑 확인용으로만 두고 커밋하지 않는다.
+BackEnd/apps_script/*.xlsx
+BackEnd/apps_script/*.csv
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

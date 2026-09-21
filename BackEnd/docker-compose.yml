@@ -1,0 +1,40 @@
+# 시놀로지 Container Manager > 프로젝트 에서 이 파일을 사용한다.
+#
+# ⚠️ 데이터 보존에 관해
+# 코드를 고칠 때마다 '프로젝트 중지 → 삭제 → 재빌드' 를 하더라도
+# 아래 volumes 로 연결된 경로의 파일은 그대로 남는다. DB(mt.db)와 백업이 여기 있다.
+# 절대 이 경로를 컨테이너 안쪽(예: /app/data)으로 바꾸지 말 것.
+#
+# 재배포 후에는 컨테이너 로그 첫 줄에서 이렇게 확인할 수 있다.
+#   INFO DB 위치: /data/mt.db
+#   INFO 보관 중인 데이터: participants 213 · deposits 198 · ...
+# participants 가 0 으로 찍히면 볼륨이 안 붙은 것이니 즉시 중단하고 경로를 확인한다.
+
+services:
+  mt-backend:
+    build: .
+    image: mathfesta-backend:latest
+    container_name: mathfesta-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+      DATA_DIR: /data
+      # 포트는 여기 한 곳에서만 정한다. gunicorn 이 이 값을 읽어 바인딩하므로
+      # 아래 ports·healthcheck 와 반드시 같은 숫자여야 한다.
+      APP_PORT: "5055"
+    ports:
+      # 리버스 프록시(DSM 응용 프로그램 포털)가 이 포트로 넘겨준다.
+      - "5055:5055"
+    volumes:
+      # 왼쪽을 NAS 의 실제 공유폴더 절대경로로 바꾼다.
+      # 프로젝트 폴더 안(./data)에 두면 프로젝트를 지울 때 함께 사라질 수 있으므로,
+      # 프로젝트 밖의 독립된 폴더를 쓰는 편이 안전하다.
+      #   예) /volume1/docker/mathfesta-data:/data
+      - /volume3/CUK_ENG/mathfesta-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5055/api/health', timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
