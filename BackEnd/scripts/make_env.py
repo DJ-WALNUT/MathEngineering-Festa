@@ -103,7 +103,8 @@ def main() -> int:
     parser.add_argument("--out", help="저장할 파일 경로 (생략하면 화면에만 출력)")
     parser.add_argument(
         "--cors",
-        default="https://예시.pages.dev,https://mt.도메인",
+        # 예시 값에 한글을 넣으면 안 된다 — 그대로 두면 응답 헤더 인코딩에서 서버가 죽는다.
+        default="https://festa.pages.dev,https://festa.example.com,http://localhost:5173",
         help="프론트엔드 도메인 (쉼표 구분)",
     )
     parser.add_argument(

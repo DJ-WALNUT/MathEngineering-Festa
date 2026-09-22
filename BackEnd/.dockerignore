@@ -7,3 +7,6 @@ __pycache__/
 venv/
 tests/
 *.db
+# 구글폼 응답 시트 — 실명·전화번호가 든 개인정보. 이미지에 들어가면 안 된다.
+apps_script/*.xlsx
+apps_script/*.csv

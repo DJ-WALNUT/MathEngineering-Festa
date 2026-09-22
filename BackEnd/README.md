@@ -77,7 +77,7 @@
 ```bash
 cd BackEnd
 python -m venv .venv
-.venv/Scripts/activate        # Windows PowerShell: .\.venv\Scripts\Activate.ps1
+source .venv/bin/activate     # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
 cp .env.example .env
@@ -156,7 +156,7 @@ python -m pytest tests -q
 | 로그 | 원인 | 해결 |
 |---|---|---|
 | `Permission denied: '/app/gunicorn.conf.py'` | 시놀로지 공유폴더는 ACL 을 써서 POSIX 모드가 `000` 으로 보인다. `COPY` 가 그 모드를 그대로 가져와 파일을 못 읽는다 | Dockerfile 의 `chmod -R a+rX /app` 이 처리한다. **이미지를 다시 빌드**해야 반영된다 |
-| `unable to open database file` | 볼륨 폴더를 uid 1000 이 쓸 수 없다 | `sudo chown -R 1000:1000 <볼륨경로>` |
+| `unable to open database file` | 볼륨 폴더(NAS 공유폴더)를 uid 1000 이 쓸 수 없다 | **이미지를 다시 빌드**한다. 진입점(`docker-entrypoint.sh`)이 시작할 때 `/data` 소유자를 맞춘다. 그래도 나면(읽기 전용 볼륨 등) `sudo chown -R 1000:1000 <볼륨경로>` |
 | 포트는 열렸는데 연결 안 됨 | `APP_PORT` 와 `ports` 가 다르다 | 둘을 같은 숫자로 |
 | `ADMIN_PASSWORD_HASH 가 비어 있어…` | `.env` 를 못 읽었다 | `.env` 가 `docker-compose.yml` 과 같은 폴더에 있는지 확인 |
 | `STAFF_PASSWORD_HASH 가 비어 있습니다` | 국원용 비밀번호를 아직 안 넣었다 | 그대로 둬도 동작한다(모두 한 비밀번호). 나누려면 `python scripts/hash_password.py --staff` |

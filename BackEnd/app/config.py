@@ -44,6 +44,22 @@ def _env_list(key: str, default: list[str]) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _ascii_origin(origin: str) -> str:
+    """'https://mt.도메인' → 'https://mt.xn--hq1bm8jm9l'. ASCII 면 그대로."""
+    if origin.isascii():
+        return origin
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(origin)
+    host = parts.hostname or ""
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError:
+        ascii_host = host.encode("ascii", "ignore").decode("ascii") or "invalid.invalid"
+    netloc = ascii_host + (f":{parts.port}" if parts.port else "")
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 def _resolve_dir(raw: str | None, default: Path) -> Path:
     if raw is None or raw.strip() == "":
         return default
@@ -107,7 +123,12 @@ class Config:
     STATEMENT_PASSWORDS = _env_list("STATEMENT_PASSWORDS", [])
 
     # --- CORS ---
-    CORS_ORIGINS = _env_list("CORS_ORIGINS", ["http://localhost:5173"])
+    #
+    # 도메인에 한글이 섞여 있으면(예: 예시 값을 그대로 둔 .env) Flask-CORS 가 그 값을
+    # Access-Control-Allow-Origin 헤더에 실어 보내다가 latin-1 인코딩에서 죽고,
+    # **모든 응답이 끊긴다.** 요청은 200 으로 처리된 뒤라 로그만 보면 원인을 알 수 없다.
+    # 그래서 호스트를 punycode 로 바꿔 헤더에 실을 수 있게 만들고, 기동 로그에 알린다.
+    CORS_ORIGINS = [_ascii_origin(item) for item in _env_list("CORS_ORIGINS", ["http://localhost:5173"])]
 
     # --- Rate limit ---
     LOOKUP_RATE_LIMIT = os.getenv("LOOKUP_RATE_LIMIT", "10 per 10 minutes")
@@ -143,5 +164,29 @@ def resolve_database_uri(config: type[Config]) -> str:
     explicit = os.getenv("DATABASE_URL")
     if explicit:
         return explicit
-    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{(config.DATA_DIR / 'mt.db').as_posix()}"
+    data_dir = config.DATA_DIR
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise RuntimeError(_data_dir_help(data_dir, str(error))) from error
+    # SQLite 는 폴더에 쓸 수 없으면 'unable to open database file' 한 줄만 남기고
+    # 죽는다. 무엇이 문제인지 여기서 먼저 확인해 사람이 읽을 수 있게 알린다.
+    if not os.access(data_dir, os.W_OK):
+        raise RuntimeError(_data_dir_help(data_dir, "쓰기 권한 없음"))
+    return f"sqlite:///{(data_dir / 'mt.db').as_posix()}"
+
+
+def _data_dir_help(data_dir: Path, reason: str) -> str:
+    import pwd
+
+    try:
+        who = f"{pwd.getpwuid(os.getuid()).pw_name}(uid {os.getuid()})"
+    except (KeyError, AttributeError):
+        who = f"uid {os.getuid()}"
+    return (
+        f"DB 폴더 {data_dir} 에 {who} 가 쓸 수 없습니다 — {reason}.\n"
+        "  · 도커라면 docker-compose.yml 의 volumes 왼쪽(NAS 실제 폴더)이 존재하고 "
+        "컨테이너 사용자(uid 1000)가 쓸 수 있어야 합니다. 진입점이 소유자를 맞추지 "
+        "못했다면 NAS 에서 `sudo chown -R 1000:1000 <볼륨경로>` 를 한 번 실행하세요.\n"
+        "  · 로컬이라면 .env 의 DATA_DIR 경로를 확인하세요."
+    )

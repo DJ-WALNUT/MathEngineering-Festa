@@ -106,6 +106,12 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
         log_startup_state(app, db)
 
     _check_admin_hash(app)
+    # 예시 도메인이 그대로면 프론트에서 API 를 부를 수 없다. 서버는 죽지 않지만 알려는 준다.
+    if any("xn--" in origin or "example" in origin for origin in app.config["CORS_ORIGINS"]):
+        app.logger.warning(
+            "CORS_ORIGINS 에 예시 도메인이 남아 있습니다 (%s). 실제 프론트 주소로 바꿔야 브라우저에서 API 가 열립니다.",
+            ", ".join(app.config["CORS_ORIGINS"]),
+        )
     if not app.config.get("INGEST_TOKEN"):
         app.logger.warning("INGEST_TOKEN 이 비어 있어 폼/입금 수집이 차단됩니다.")
 

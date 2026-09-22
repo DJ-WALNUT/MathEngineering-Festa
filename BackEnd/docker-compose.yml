@@ -23,10 +23,10 @@ services:
       DATA_DIR: /data
       # 포트는 여기 한 곳에서만 정한다. gunicorn 이 이 값을 읽어 바인딩하므로
       # 아래 ports·healthcheck 와 반드시 같은 숫자여야 한다.
-      APP_PORT: "5055"
+      APP_PORT: "5065"
     ports:
       # 리버스 프록시(DSM 응용 프로그램 포털)가 이 포트로 넘겨준다.
-      - "5055:5055"
+      - "5065:5065"
     volumes:
       # 왼쪽을 NAS 의 실제 공유폴더 절대경로로 바꾼다.
       # 프로젝트 폴더 안(./data)에 두면 프로젝트를 지울 때 함께 사라질 수 있으므로,
@@ -34,7 +34,7 @@ services:
       #   예) /volume1/docker/mathfesta-data:/data
       - /volume3/CUK_ENG/mathfesta-data:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5055/api/health', timeout=3).status==200 else 1)"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5065/api/health', timeout=3).status==200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3

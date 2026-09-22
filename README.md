@@ -111,7 +111,7 @@ Enter · Space  한 번이면 차례로        A / S / D  그 자리만 바로
 ```bash
 # 백엔드
 cd BackEnd
-python -m venv .venv && .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # SECRET_KEY / ADMIN_PASSWORD_HASH / STAFF_PASSWORD_HASH / INGEST_TOKEN
 python wsgi.py                # http://127.0.0.1:8000

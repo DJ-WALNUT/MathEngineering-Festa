@@ -21,8 +21,14 @@ COPY . .
 RUN mkdir -p /data && \
     adduser --disabled-password --gecos "" --uid 1000 appuser && \
     chmod -R a+rX /app && \
+    chmod +x /app/docker-entrypoint.sh && \
     chown -R appuser:appuser /app /data
-USER appuser
+
+# USER 를 appuser 로 박지 않는다. 진입점(docker-entrypoint.sh)이 root 로 시작해
+# /data 의 소유자를 appuser 로 맞춘 뒤 setpriv 로 권한을 내려서 앱을 띄운다.
+# NAS 공유폴더를 볼륨으로 붙이면 소유자가 root 나 DSM 사용자로 잡혀 있어,
+# 처음부터 appuser 로 돌면 DB 파일을 만들 수 없기 때문이다.
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 VOLUME ["/data"]
 
