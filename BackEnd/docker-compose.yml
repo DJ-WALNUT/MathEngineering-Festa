@@ -13,8 +13,8 @@
 services:
   mt-backend:
     build: .
-    image: mathfesta-backend:latest
-    container_name: mathfesta-backend
+    image: mefesta-backend:latest
+    container_name: mefesta-backend
     restart: unless-stopped
     env_file:
       - .env
@@ -31,8 +31,8 @@ services:
       # 왼쪽을 NAS 의 실제 공유폴더 절대경로로 바꾼다.
       # 프로젝트 폴더 안(./data)에 두면 프로젝트를 지울 때 함께 사라질 수 있으므로,
       # 프로젝트 밖의 독립된 폴더를 쓰는 편이 안전하다.
-      #   예) /volume1/docker/mathfesta-data:/data
-      - /volume3/CUK_ENG/mathfesta-data:/data
+      #   예) /volume1/docker/mefesta-data:/data
+      - /volume3/CUK_ENG/mefesta-data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5065/api/health', timeout=3).status==200 else 1)"]
       interval: 30s
