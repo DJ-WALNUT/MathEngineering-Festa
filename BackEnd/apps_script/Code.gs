@@ -1,52 +1,74 @@
 /**
- * 공들이 신청 폼 → MT 백엔드 연동 스크립트
+ * '이공공이 2002' 신청 폼 → 백엔드 연동 스크립트
+ *
+ * 폼 응답이 모이는 구글 시트('[이과대 X 공과대] 이공공이(2002) 참여자 모집(응답)')에
+ * 설치한다. 응답이 들어올 때마다 그 행을 백엔드로 보내고, 한 번은 시트 전체를 밀어넣는다.
  *
  * ─────────────────────────────────────────────────────────────
- * [설치 순서]  얼리버드 / 본모집 / 스태프 시트에 각각 설치한다.
+ * [설치 순서]
  *
- * 1. 폼 응답이 모이는 구글 시트를 열고  확장 프로그램 > Apps Script
- * 2. 이 파일 내용을 붙여넣고 저장
- * 3. 프로젝트 설정 > 스크립트 속성 에 3개를 추가
- *      BACKEND_URL   https://api.example.com        (끝에 / 없이)
- *      INGEST_TOKEN  .env 의 INGEST_TOKEN 과 동일한 값
- *      INTAKE_ROUND  earlybird   ← 얼리버드 시트
- *                    main        ← 본모집 시트
- *                    staff       ← 스태프 시트 (이 값으로 보낸 사람은
- *                                  백엔드에서 자동으로 스태프가 된다)
- * 4. previewMapping 을 실행해 컬럼이 제대로 잡히는지 로그로 확인  ★중요★
- * 5. setupTrigger 를 실행 (권한 승인 필요)
- * 6. syncAll 을 실행해 기존 응답을 전부 밀어넣는다
+ * 1. 응답 시트를 열고  확장 프로그램 > Apps Script
+ * 2. 이 파일 내용을 붙여넣고 저장 (파일 이름은 아무거나)
+ * 3. 왼쪽 톱니바퀴(프로젝트 설정) > 스크립트 속성 에 3개를 추가
+ *      BACKEND_URL   https://api.도메인            (끝에 / 없이. 시놀로지 역방향 프록시 주소)
+ *      INGEST_TOKEN  백엔드 .env 의 INGEST_TOKEN 과 똑같은 값
+ *      INTAKE_ROUND  main                         (참가자 시트. 스태프 전용 시트를 따로 두면 그쪽만 staff)
+ * 4. testConnection 실행 — 백엔드까지 닿고 토큰이 맞는지 확인
+ * 5. previewMapping 실행 — 아래 [열 → 필드] 표대로 잡히는지 로그로 확인  ★중요★
+ * 6. setupTrigger 실행 (권한 승인 창이 뜨면 허용)
+ * 7. syncAll 실행 — 이미 들어와 있는 응답을 전부 밀어넣는다
+ *
+ * 실행은 상단 함수 선택 드롭다운에서 고르고 ▶ 를 누른다. 로그는 '실행 로그' 탭.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * [열 → 필드]  previewMapping 이 이렇게 찍혀야 한다.
+ *
+ *   타임스탬프                              → submittedAt
+ *   개인정보 수집·이용 및 초상권 활용 동의서   → portraitConsent
+ *   이름                                    → name
+ *   학과                                    → department
+ *   학번 (예시: 202600000)                   → studentId
+ *   전화번호 (예시: 010-1234-5678)           → phone
+ *   총학생회비 납부여부                       → isCouncilMember   (5,000 / 7,000원이 갈린다)
+ *   참가비 입금 (안내문)                      → declaredPaid      (본인이 냈다고 답한 값)
+ *   1부 교류전 - 조장 지원 여부              → leaderPreference  (조 편성 때 '조장 희망' 배지)
+ *   솔로파티 참가 여부                        → joinsAfterparty   (청구액 +10,000 · 2부 출석 대상)
+ *   솔로파티 사전 참여비                      → afterpartyFeeAcknowledged
+ *   성별                                    → gender
+ *   태어난 년도                              → birthYear
+ *   닉네임                                  → nickname
+ *
+ * 폼에 문항을 더하면 previewMapping 의 '매핑 규칙 없음' 에 뜬다. 관리자 화면에서
+ * 봐야 할 값이면 아래 FIELD_RULES 에 한 줄 추가하고, 백엔드 services.py 의 별칭 표에도 넣는다.
  *
  * ─────────────────────────────────────────────────────────────
  * [설계 원칙]
  *
  * ● 위치 기반으로 읽는다
- *   '입금 완료 되셨을까요?' 컬럼이 납부자용·미납부자용으로 두 개 있다.
- *   e.namedValues 는 질문 제목이 키라서 제목이 같으면 충돌한다.
+ *   e.namedValues 는 질문 제목이 키라서 제목이 같은 열이 둘이면 충돌한다.
  *   그래서 헤더 행과 응답 행을 위치로 맞춰 읽는다.
  *
  * ● 명시적으로 매핑된 항목만 보낸다
- *   FIELD_RULES 에 없는 컬럼은 전송하지 않는다. 새 질문이 추가되어도
+ *   FIELD_RULES 에 없는 열은 전송하지 않는다. 새 질문이 추가되어도
  *   모르는 데이터가 서버로 새어 들어가지 않는다.
  *
  * ● 민감 항목은 여기서 잘라낸다
  *   주민등록번호는 개인정보보호법 제24조의2 상 법령 근거 없이 처리할 수 없고,
  *   이 시스템은 이름·전화번호로만 매칭하므로 쓸 일이 전혀 없다.
  *   납부 증빙 스크린샷(드라이브 링크)도 보관하지 않는다.
- *   → DENY_RULES 에 걸리면 전송 대상에서 제외한다.
+ *   → DENY_RULES 에 걸리면 전송 대상에서 제외한다. (이번 폼에는 해당 열이 없다)
  *
- * ● 뒤풀이 참가 여부는 폼 문항에서 온다
- *   FIELD_RULES 의 joinsAfterparty 규칙이 그 컬럼을 잡는다. 문항이 없는 폼(스태프
- *   시트 등)에서는 값이 아예 오지 않고, 그때 백엔드는 **기존 값을 건드리지 않는다** —
- *   관리자가 화면에서 켜 둔 것이 재제출 한 번으로 풀려서는 안 되기 때문이다.
+ * ● 답변이 문장이다
+ *   '납부하지 않았습니다' · '입금하였습니다' · '참여하겠습니다' 처럼 온다.
+ *   참/거짓 판정은 백엔드가 어미를 보고 한다 — 여기서는 문구를 그대로 보낸다.
  *
- * ● 스태프 시트도 같은 규칙을 쓴다
- *   질문 구성이 참가자 폼과 거의 같아서 FIELD_RULES 를 그대로 태운다.
- *   다른 점은 두 가지뿐이고, 둘 다 규칙을 고치지 않아도 된다 —
- *   총학생회비 질문이 없어 isCouncilMember 가 비고(스태프는 요금 구분이
- *   '스태프'라 쓰이지 않는다), 참가비 안내문에 '스태프'가 적혀 있지만
- *   그 컬럼은 어느 규칙에도 걸리지 않아 전송되지 않는다.
- *   스태프인지는 컬럼이 아니라 INTAKE_ROUND=staff 하나로 정해진다.
+ * ● 문항이 없는 시트에서는 값이 오지 않는다
+ *   그때 백엔드는 기존 값을 건드리지 않는다. 관리자가 화면에서 적어 둔 닉네임이나
+ *   켜 둔 솔로파티 참가가 재제출 한 번으로 풀려서는 안 되기 때문이다.
+ *
+ * ● 스태프 전용 시트를 두는 경우
+ *   같은 규칙을 그대로 쓰고 INTAKE_ROUND=staff 만 다르게 준다. 그 시트로 들어온
+ *   사람은 백엔드에서 자동으로 스태프가 된다(참가비도 스태프 금액).
  */
 
 var PROPS = PropertiesService.getScriptProperties();
@@ -76,8 +98,9 @@ function containsAll_() {
 }
 
 /**
- * 절대 전송하지 않는 컬럼.
- * DENY 가 FIELD_RULES 보다 먼저 평가된다.
+ * 절대 전송하지 않는 열.
+ * DENY 가 FIELD_RULES 보다 먼저 평가된다. 이번 폼에는 해당 열이 없지만,
+ * 나중에 문항이 추가되어도 여기 걸리면 서버로 가지 않는다.
  */
 var DENY_RULES = [
   { reason: '주민등록번호 (개인정보보호법 제24조의2)', test: contains_('주민등록') },
@@ -87,59 +110,50 @@ var DENY_RULES = [
 ];
 
 /**
- * 컬럼 → 백엔드 필드 매핑. 위에서부터 먼저 맞는 규칙이 적용된다.
+ * 열 → 백엔드 필드 매핑. 위에서부터 먼저 맞는 규칙이 적용된다.
  *
- * 헤더가 긴 안내문이라 단순 포함 검사는 위험하다. 예를 들어
- * '입금자명 : 성명+전화번호 뒷자리...' 에는 '성명'과 '전화번호'가 모두 들어 있어
- * 이름/전화번호 컬럼으로 오인될 수 있다. 그래서 앞부분 일치(startsWith)를
- * 우선 쓰고, 필요한 경우 두 개 이상의 키워드를 함께 요구한다.
+ * 헤더에는 예시 문구와 안내문이 붙어 있다('학번 (예시: 202600000)', '참가비 입금 - 총학생회비
+ * 납부자: 5,000원 …'). normalizeHeader_ 가 공백·줄바꿈을 지우므로 **앞부분 일치(startsWith)**
+ * 를 기본으로 쓴다. contains 로 보면 안내문 속 낱말('총학생회비' · '학과' · '솔로파티')에
+ * 엉뚱한 열이 걸린다.
  */
-//
-// 이번 폼('[이과대 X 공과대] 이공공이(2002) 참여자 모집')의 열은 이렇다. 헤더의 예시 문구와
-// 줄바꿈은 normalizeHeader_ 가 지우므로 앞부분만 본다.
-//
-//   타임스탬프 · 개인정보·초상권 동의서 · 이름 · 학과 · 학번(예시…) · 전화번호(예시…) ·
-//   총학생회비 납부여부 · 참가비 입금(안내문…) · 1부 교류전 - 조장 지원 여부 ·
-//   솔로파티 참가 여부 · 솔로파티 사전 참여비 · 성별 · 태어난 년도 · 닉네임
-//
 var FIELD_RULES = [
   { field: 'submittedAt',     test: startsWith_('타임스탬프') },
   { field: 'name',            test: function (h) { return h === '이름' || h === '성명'; } },
   { field: 'studentId',       test: startsWith_('학번') },
   { field: 'gender',          test: startsWith_('성별') },
   { field: 'phone',           test: startsWith_('전화번호') },
-  { field: 'emergencyPhone',  test: startsWith_('비상') },
-  // '학과' 한 단어짜리 열과 '소속 학과'. 동의서 본문에도 '학과'가 들어 있어 startsWith 로만 본다.
-  { field: 'department',      test: function (h) { return h.indexOf('소속') === 0 || h.indexOf('학과') === 0; } },
+  // 동의서 본문에도 '학과'가 들어 있어 앞부분 일치로만 본다.
+  { field: 'department',      test: function (h) { return h.indexOf('학과') === 0 || h.indexOf('소속') === 0; } },
 
-  // '지병이 있으십니까?' 와 '지병 증상 발현 시 조치사항' 이 둘 다 '지병'을 포함한다.
-  { field: 'healthAction',    test: contains_('조치사항') },
-  { field: 'hasHealthIssue',  test: containsAll_('지병', '있으십니까') },
-  { field: 'healthNote',      test: startsWith_('병명') },
-
-  // '식재료 알레르기 유무'(응답) 와 '식품 알레르기가 있는 참가자는...'(안내 확인)를 구분
-  { field: 'allergy',         test: startsWith_('식재료알레르기') },
-
-  // '총학생회비 납부여부' — 앞부분 일치. '참가비 입금' 열의 안내문에도 '총학생회비 납부자'가
-  // 들어 있으므로 contains 로 보면 그 열까지 잡힌다.
-  { field: 'isCouncilMember', test: function (h) { return h.indexOf('총학생회비') === 0 || containsAll_('총학생회비', '납부하셨')(h); } },
-
-  // 본인이 '입금했다'고 답한 값. 이번 폼은 '참가비 입금(안내문…)', 지난 폼은 '입금 완료…'.
-  { field: 'declaredPaid',    test: function (h) { return h.indexOf('참가비입금') === 0 || h.indexOf('입금완료') === 0; }, multi: true },
+  // '총학생회비 납부여부'. '참가비 입금' 열의 안내문에도 '총학생회비 납부자'가 있으므로 앞부분 일치.
+  { field: 'isCouncilMember', test: startsWith_('총학생회비') },
+  // '참가비 입금 (…안내문…)' — 본인이 냈다고 답한 값. 은행 내역과 다를 수 있어 참고용이다.
+  { field: 'declaredPaid',    test: startsWith_('참가비입금') },
 
   // 1부 교류전 조장 지원 여부 — 조 편성 때 '하고 싶다'를 먼저 앉힌다.
   { field: 'leaderPreference', test: contains_('조장') },
-  // 닉네임 · 태어난 년도 — 솔로파티와 명찰에 쓴다.
+
+  // 솔로파티 열이 둘이다 — '참가 여부' 와 '사전 참여비'(비용은 추후 안내라는 것을 확인했는가).
+  // 둘 다 '솔로파티'를 품고 있으므로 구체적인 쪽(참여비)을 먼저 건다.
+  { field: 'afterpartyFeeAcknowledged', test: containsAll_('솔로파티', '참여비') },
+  // 이 값이 켜지면 청구액에 솔로파티비가 얹히고 2부 출석 회차의 대상이 된다.
+  { field: 'joinsAfterparty', test: function (h) { return h.indexOf('솔로파티') !== -1 || h.indexOf('뒤풀이') !== -1; } },
+
+  // 닉네임 · 태어난 년도 — 솔로파티와 명찰에 쓴다. ('2004년' 같은 표기는 백엔드가 숫자로 정리)
   { field: 'nickname',        test: function (h) { return h.indexOf('닉네임') === 0 || h.indexOf('별명') === 0; } },
   { field: 'birthYear',       test: function (h) { return h.indexOf('태어난') === 0 || h.indexOf('출생') === 0; } },
 
-  // 솔로파티(뒤풀이) 관련 열이 둘이다 — '참가 여부' 와 '사전 참여비'(안내를 확인했는가).
-  // 둘 다 '솔로파티'를 품고 있으므로 구체적인 쪽(참여비)을 먼저 건다.
-  { field: 'afterpartyFeeAcknowledged', test: containsAll_('솔로파티', '참여비') },
-  // 이 값이 켜지면 참가비에 솔로파티비가 얹히고, 2부 출석 회차의 대상이 된다.
-  { field: 'joinsAfterparty', test: function (h) { return (h.indexOf('솔로파티') !== -1 || h.indexOf('뒤풀이') !== -1) && h.indexOf('참여비') === -1; } },
-
+  // 개인정보 · 초상권 동의서. 동의하지 않으면 참가 자체가 안 되므로 늘 '동의합니다'다.
   { field: 'portraitConsent', test: contains_('초상') },
+
+  // ── 이번 폼에는 없는 항목 ──
+  // 지난 행사 폼에 있던 것들. 문항을 되살리면 그대로 잡힌다. 없으면 아무 일도 없다.
+  { field: 'emergencyPhone',  test: startsWith_('비상') },
+  { field: 'healthAction',    test: contains_('조치사항') },
+  { field: 'hasHealthIssue',  test: containsAll_('지병', '있으십니까') },
+  { field: 'healthNote',      test: startsWith_('병명') },
+  { field: 'allergy',         test: startsWith_('식재료알레르기') },
 ];
 
 // ---------------------------------------------------------------------------
@@ -152,8 +166,8 @@ function getConfig_() {
   if (!backendUrl || !token) {
     throw new Error('스크립트 속성에 BACKEND_URL 과 INGEST_TOKEN 을 먼저 설정하세요.');
   }
-  // 이번 행사는 참가자 시트가 하나라 'main' 이면 된다. 스태프 시트를 따로 두면 'staff'.
-  if (round !== 'earlybird' && round !== 'main' && round !== 'staff') {
+  // 이번 행사는 참가자 시트가 하나라 'main' 이면 된다. 스태프 시트를 따로 두면 그쪽만 'staff'.
+  if (round !== 'main' && round !== 'staff' && round !== 'earlybird') {
     throw new Error("스크립트 속성 INTAKE_ROUND 를 'main' (참가자 시트) 또는 'staff' (스태프 시트) 로 설정하세요.");
   }
   var base = backendUrl.replace(/\/+$/, '');
