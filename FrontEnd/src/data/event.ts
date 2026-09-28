@@ -127,7 +127,7 @@ export const EVENT = {
       key: 'main',
       label: '선착순',
       startsAt: '2026-09-22T00:00:00+09:00',
-      endsAt: '2026-09-25T17:59:59+09:00',
+      endsAt: '2026-09-30T17:59:59+09:00',
       // TODO: 구글 폼 링크로 교체. 비워 두면 신청 버튼이 '준비 중'으로 잠긴다.
       formUrl: 'https://forms.gle/mn6hesfnBZpVnpBx5',
     },
